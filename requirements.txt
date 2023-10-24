@@ -10,7 +10,7 @@ google-auth==2.6.0
 google-auth-oauthlib==0.4.6
 google-pasta==0.2.0
 grpcio==1.44.0
-install h5py
+h5py
 idna==3.3
 importlib-metadata
 keras==2.7.0
@@ -42,4 +42,7 @@ urllib3==1.26.8
 werkzeug==2.0.3
 wrapt==1.14.0
 zipp
+fasttext
+modA
+
 

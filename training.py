@@ -1,13 +1,14 @@
+from tensorflow.keras.layers import Bidirectional, LSTM, Dense, Dropout, TimeDistributed
 import tensorflow as tf
-from tensorflow.keras.layers import GRU, LSTM, Bidirectional, TimeDistributed, Dropout, Dense
-from attention import AttentionNetwork
-from tensorflow.keras.models import Sequential
 
+LSTM_UNITS_1 = 100
+LSTM_UNITS_2 = 50
+ATTENTION_DIM = 50
+DROPOUT_RATE = 0.1
+LEARNING_RATE = 1e-4
 
 def build_model(hp):
-    """
-        Build model function for FT-HAN-BiLSTM architecture with hyper-parameter optimization enabled.
-        """
+    """Build model function for FT-HAN-BiLSTM architecture with hyper-parameter optimization enabled."""
     word_encoder = Sequential([
         Bidirectional(GRU(units=hp.Int("units_1", min_value=25, max_value=100, step=25), return_sequences=True)),
         AttentionNetwork(hp.Choice("attention_dim_1", [50, 100])),
@@ -27,87 +28,49 @@ def build_model(hp):
                   metrics=['accuracy'])
     return model
 
+def train(train_ds, val_ds, epochs=50, encoder=None):
+    """Builds and trains the model."""
+    word_encoder_layers = [
+        Bidirectional(LSTM(LSTM_UNITS_1, return_sequences=True)),
+        Bidirectional(LSTM(LSTM_UNITS_2, return_sequences=True)),
+        AttentionNetwork(ATTENTION_DIM)
+    ]
 
-def train(train_ds, val_ds, epochs=50, encoder=None, bilstm=False):
-    """
-        Builds and trains the model
-        :param train_ds: training data_set
-        :param val_ds: validation data_sets
-        :param epochs: number of epochs for training
-        :param encoder: the pre-trained encoder from auto-encoder
-        :param bilstm: a flag to use a biLSTM network or not on the sentence-level network
-        :return: trained model and history
-        """
-    
-   
-    # Word-level layers
-    if encoder is not None:
-        word_encoder = Sequential([
-            encoder.layers[0],
-            Bidirectional(LSTM(100, return_sequences=True)),
-           Bidirectional(LSTM(50, return_sequences=True)),
-            AttentionNetwork(50),
-        ])
-    else:
-        word_encoder = Sequential([
-            Bidirectional(LSTM(100, return_sequences=True)),
-            Bidirectional(LSTM(50, return_sequences=True)),
-            AttentionNetwork(50),
-        ])
+    if encoder:
+        word_encoder_layers.insert(0, encoder.layers[0])
 
-    # Sentence-level layers
-    if bilstm:
-        model = Sequential([
-            TimeDistributed(word_encoder),
-            Bidirectional(LSTM(100, return_sequences=True)),
-            Bidirectional(LSTM(50, return_sequences=True)),
-            AttentionNetwork(50),
-            Dropout(0.1),
-            Dense(1)
-        ])
-    else:
-        model = Sequential([
-            TimeDistributed(word_encoder),
-            Bidirectional(LSTM(100, return_sequences=True)),
-            Bidirectional(LSTM(50, return_sequences=True)),
-            AttentionNetwork(50),
-            Dropout(0.1),
-            Dense(1)
-        ])
+    word_encoder = Sequential(word_encoder_layers)
 
-    # Freeze the encoder-part of the auto-encoder, if it is included.
-    if encoder is not None:
+    model = Sequential([
+        TimeDistributed(word_encoder),
+        Bidirectional(LSTM(LSTM_UNITS_1, return_sequences=True)),
+        Bidirectional(LSTM(LSTM_UNITS_2, return_sequences=True)),
+        AttentionNetwork(ATTENTION_DIM),
+        Dropout(DROPOUT_RATE),
+        Dense(1)
+    ])
+
+    if encoder:
         model.layers[0].layer.layers[0].trainable = False
 
     callback = tf.keras.callbacks.EarlyStopping(monitor='loss', patience=5)
 
     model.compile(loss=tf.keras.losses.BinaryCrossentropy(from_logits=True),
-                  optimizer=tf.keras.optimizers.Adam(1e-4),
+                  optimizer=tf.keras.optimizers.Adam(LEARNING_RATE),
                   metrics=['accuracy'])
 
     val_steps = val_ds.cardinality().numpy()
     history = model.fit(train_ds, validation_data=val_ds, epochs=epochs,
-                        
                         validation_steps=val_steps,
                         callbacks=[callback])
-
     return model, history
 
-
 def test(model, test_ds):
-    """
-        Evaluates the model
-        :param model: trained model
-        :param test_ds: test data_sets
-        :return: test loss & accuracy
-        """
+    """Evaluates the model."""
     if isinstance(model, tf.keras.Sequential):
         test_loss, test_acc = model.evaluate(test_ds)
-
         print('Test Loss:', test_loss)
         print('Test Accuracy:', test_acc)
         return test_loss, test_acc
     else:
-        raise TypeError("The model ist not of type tf.keras.Sequential")
-
-
+        raise TypeError("The model is not of type tf.keras.Sequential.")
