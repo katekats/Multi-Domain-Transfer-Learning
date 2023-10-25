@@ -21,7 +21,7 @@ We use the datasets from the paper of Pengfei Liu, Xipeng Qiu, and Xuanjing Huan
 
 First we need to train the general model. For that we will use the script: train_general_script.py. With the option --bilstm=True we select to use bilstm and the option: --exclude is if we want to exclude a specific domain. Finally, the field "new_file_path" is the the name of the trained model.
 
-run train_general_script.py --bilstm=True --exclude="Domain_Name" -n “model_name”
+run train_general_script.py --bilstm=True --exclude="Domain_Name" -n “general_model”
 
 **Transfer Learning**
 
@@ -32,7 +32,7 @@ In The transfer_learning.py script we can select the approach we want to use for
    
 On command line or the run.py script we need to run this command:
 
-    python transfer_learning.py -i /path/to/model -o output_file_name -a S
+    python transfer_learning.py -i /path/to/general_model -o output_file_name -a S
 
     *  -i:  the input model path
     *  -o:  the output file name
@@ -42,4 +42,14 @@ On command line or the run.py script we need to run this command:
 
 **Use the model with Active Learning**
 
-run active_learning.py -i ./models/“FT-HAN-BiLSTM-Music-4_gen”.h5 -o \"FT-HAN-BiLSTM-active_learning-Music-Sent2\" -a S -m entropy --use-outlier-detection=False
+Next we will proceed with transfer learning but including also the active learning algorithm. For that we will run the active_learning.py script:
+
+
+run active_learning.py -i ./path/to/general_model -o \"output_file_name\" -a S -m entropy --use-outlier-detection=True
+
+   *  -i:  the input model path
+   *  -o:  the output file name
+   * -a: the fine-tuning approach (it can be either, W, S or A like we mentioned above)
+   * -m: the metric we want to use (entropy)
+   * --use-outlier-detection: if we want to use outlier detection or not 
+     
