@@ -11,9 +11,17 @@ python3 -m venv .venv
 source .venv/bin/activate  
 pip install -r requirements.txt
 
+For running the models either we can do it directly from the command line or we can use the Run.py script.
+
 **Datasets:**
 
 We use the datasets from the paper of Pengfei Liu, Xipeng Qiu, and Xuanjing Huang. 2017. Adversarial Multi-task Learning for Text Classification. In Proceedings of the 55th Annual Meeting of theAssociation for Computational Linguistics (Volume 1: Long Papers). Associationfor Computational Linguistics, Vancouver, Canada, 1–10.
 
-** Train the General Model**
+**Train the General Model**
 
+First we need to train the general model. For that we will use the script: train_general_script.py. 
+
+**Transfer Learning**
+
+
+**Use the model with Active Learning**
