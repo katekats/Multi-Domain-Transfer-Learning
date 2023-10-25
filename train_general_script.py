@@ -1,153 +1,115 @@
-import getopt
 import os
 import sys
 from sys import exit
-
+import argparse
 import fasttext
 import tensorflow as tf
-
 import data_loader
 import training
 from preprocessor import Preprocessor
 from data_loader import Domain
+import os
+import argparse
+import tensorflow as tf
 
-max_len = 50
-max_sentences = 30
-batch_size = 128
+# Constants
+MAX_LEN = 50
+MAX_SENTENCES = 30
+BATCH_SIZE = 128
+DATA_PATH = './prepared_datasets/prepared_datasets'
+EMBEDDINGS_PATH = './embeddings/general_embeddings.bin'
+MODEL_DIR = './models'
 
-#import zipfile
-#with zipfile.ZipFile("prepared_datasets.zip", 'r') as zip_ref:
-#    zip_ref.extractall("prepared_datasets")
 
-use_Bilstm = False
-encoder_path = None
-encoder = None
-model_name = None
-excluded_domain = None
-if "-n" not in sys.argv:
-    print('Usage: train_general_script.py [--bilstm=<Boolean> --encoder=<path_to_encoder> --exclude=<domain>] -n  "FT-HAN-BiLSTM"\n'
-          ' --bilstm, --encoder and --exclude are optional arguments.')
-    exit(2)
+def setup_argument_parser():
+    parser = argparse.ArgumentParser(description='Train General Script')
+    parser.add_argument('-n', required=True, type=str, help='Model name')
+    parser.add_argument('--bilstm', type=lambda x: (x.lower() == 'true'), default=False, help='Use BiLSTM')
+    parser.add_argument('--exclude', type=str, help='Domain to exclude')
+    return parser.parse_args()
 
-try:
-    opts, args = getopt.getopt(sys.argv[1:], "hn:", ["bilstm=", "encoder=", "exclude="])
-except getopt.GetoptError:
-    print('Usage: train_general_script.py [--bilstm=<Boolean> --encoder=<path_to_encoder> --exclude=<domain>] -n <model_name>\n'
-          ' --bilstm, --encoder and --exclude are optional arguments.')
-    sys.exit(2)
-for opt, arg in opts:
-    if opt == '-h':
-        print('Usage: train_general_script.py [--bilstm=<Boolean> --encoder=<path_to_encoder> --exclude=<domain>] -n <model_name>\n'
-              ' --bilstm, --encoder and --exclude are optional arguments.')
-        sys.exit()
-    elif opt == "-n":
-        model_name = arg
-    elif opt == "--bilstm":
-        use_Bilstm = (arg.lower() == 'true')
-    elif opt == "--encoder":
-        encoder_path = arg
-    elif opt == "--exclude":
-        excluded_domain = arg
-# Load the encoder
-if encoder_path is not None:
-    encoder = tf.keras.models.load_model(encoder_path)
 
-# Excluded
-if excluded_domain is not None and excluded_domain not in [e.value for e in Domain]:
-    print(f'--exclude parameter input: {excluded_domain} is an unknown domain. If you want to exclude a domain from training, '
-          f'please choose from {[e.value for e in Domain]}')
-    sys.exit(1)
+def check_directories():
+    directories = {
+        DATA_PATH: 'It seems the ./prepared_datasets folder is missing...',
+        './embeddings': 'Creating ./embeddings folder...'
+    }
 
-# Making sure the necessary folders exist
-if not os.path.exists('./prepared_datasets/prepared_datasets'):
-    print('It seems the ./prepared_datasets folder is missing. '
-          'Please, make sure to pull the latest changes and to unzip the prepared_datasets.zip file')
-    sys.exit(1)
-if not os.path.exists('./embeddings'):
-    print('Creating ./embeddings folder...')
-    os.mkdir('./embeddings')
+    for dir_path, message in directories.items():
+        if not os.path.exists(dir_path):
+            if dir_path == './embeddings':
+                os.mkdir(dir_path)
+                print(message)
+            else:
+                print(message)
+                sys.exit(1)
 
-if not os.path.exists('./embeddings/general_embeddings.bin'):
-    if not os.path.exists('./prepared_datasets/prepared_datasets/ALL_corpus.txt'):
-        print('It seems the ./prepared_datasets/prepared_datasets folder is incomplete. '
-              'Please, make sure to pull the latest changes and to unzip the prepared_datasets.zip file')
-        sys.exit(1)
 
-    print('Producing general embeddings using FastText...')
-    general_embeddings = fasttext.train_unsupervised('./prepared_datasets/prepared_datasets/ALL_corpus.txt',dim=100, minCount=1)
-    general_embeddings.save_model('./embeddings/general_embeddings.bin')
+def generate_embeddings():
+    if not os.path.exists(EMBEDDINGS_PATH) and not os.path.exists(f'{DATA_PATH}/ALL_corpus.txt'):
+        print('Producing general embeddings using FastText...')
+        general_embeddings = fasttext.train_unsupervised(f'{DATA_PATH}/ALL_corpus.txt', dim=100, minCount=1)
+        general_embeddings.save_model(EMBEDDINGS_PATH)
 
-# Load data
-train_ds, val_ds, test_ds = data_loader.load_data('./prepared_datasets/prepared_datasets', batch_size=batch_size, exclude_domain=excluded_domain)
 
-# preprocessor
-preprocessor = Preprocessor(max_sentences, max_len)
-preprocessor.set_fasttext_model('./embeddings/general_embeddings.bin')
+def preprocess_dataset(dataset, preprocessor):
+    fasttext_dimension = preprocessor.fasttext_model.get_dimension()
 
-# Fasttext:
-#fasttext_dimension = preprocessor.fasttext_model.get_dimension()
-#preprocessed_train_ds = train_ds.map(lambda x, y: (
-#    tf.ensure_shape(
-#        tf.py_function(preprocessor.preprocess_ds_fasttext, [x], tf.float32),
-#        [x.shape[0], max_sentences, max_len, fasttext_dimension]), y),
-##                                     num_parallel_calls=tf.data.experimental.AUTOTUNE,
- #                                    deterministic=False
- #                                    )
-#preprocessed_val_ds = val_ds.map(lambda x, y: (
-#    tf.ensure_shape(
-#        tf.py_function(preprocessor.preprocess_ds_fasttext, [x], tf.float32),
-#        [x.shape[0], max_sentences, max_len, fasttext_dimension]), y),
- #                                #num_parallel_calls=tf.data.experimental.AUTOTUNE,
- #                                #deterministic=False
- #                                )
-#preprocessed_test_ds = test_ds.map(lambda x, y: (
- #   tf.ensure_shape(
- #       tf.py_function(preprocessor.preprocess_ds_fasttext, [x], tf.float32),
-  #      [x.shape[0], max_sentences, max_len, fasttext_dimension]), y),
-                                  # num_parallel_calls=tf.data.experimental.AUTOTUNE,
-                                  # deterministic=False
-  #                                 )
-# Training
-#model, m_history = training.train(preprocessed_train_ds, preprocessed_val_ds,
-   #                               epochs=100, bilstm=use_Bilstm, encoder=encoder)#
-
-# Fasttext:
-fasttext_dimension = preprocessor.fasttext_model.get_dimension()
-preprocessed_train_ds = train_ds.map(lambda x, y: (
-    tf.ensure_shape(
-        tf.py_function(preprocessor.preprocess_ds_fasttext, [x], tf.float32),
-        [x.shape[0], max_sentences, max_len, fasttext_dimension]), y))
-preprocessed_val_ds = val_ds.map(lambda x, y: (
-    tf.ensure_shape(
-        tf.py_function(preprocessor.preprocess_ds_fasttext, [x], tf.float32),
-        [x.shape[0], max_sentences, max_len, fasttext_dimension]), y))
-preprocessed_test_ds = test_ds.map(lambda x, y: (
-    tf.ensure_shape(
-        tf.py_function(preprocessor.preprocess_ds_fasttext, [x], tf.float32),
-        [x.shape[0], max_sentences, max_len, fasttext_dimension]), y))
-# Training
-model, m_history = training.train(preprocessed_train_ds, preprocessed_val_ds,
-                                  epochs=50, bilstm=use_Bilstm, encoder=encoder)
-
-# Evaluating
-print("Performance on testing data")
-model.evaluate(preprocessed_test_ds)
-
-for d in Domain:
-    print(f'Performance on {d.value} domain')
-    domain_train_ds, domain_val_ds, domain_test_ds = data_loader.load_data(
-        './prepared_datasets/prepared_datasets', domain=d, batch_size=32)
-
-    domain_preprocessed_test_ds = domain_test_ds.map(lambda x, y: (
+    return dataset.map(lambda x, y: (
         tf.ensure_shape(
             tf.py_function(preprocessor.preprocess_ds_fasttext, [x], tf.float32),
-            [x.shape[0], max_sentences, max_len, fasttext_dimension]), y)
-                                       )
-    model.evaluate(domain_preprocessed_test_ds)
+            [x.shape[0], MAX_SENTENCES, MAX_LEN, fasttext_dimension]), y))
 
-# Save the model to disk
-if not os.path.exists('./models'):
-    print('Creating ./models folder...')
-    os.mkdir('./models')
-model.save(f'models/{model_name}.h5', save_format='h5')
-print(f'The model was saved to ./models/{model_name}.h5')
+
+def main():
+    args = setup_argument_parser()
+
+    model_name = args.n
+    use_Bilstm = args.bilstm
+    excluded_domain = args.exclude
+
+    # Check exclusion domain
+    if excluded_domain and excluded_domain not in [e.value for e in Domain]:
+        print(f'--exclude parameter input: {excluded_domain} is an unknown domain...')
+        sys.exit(1)
+
+    check_directories()
+    generate_embeddings()
+
+    # Load data
+    train_ds, val_ds, test_ds = data_loader.load_data(DATA_PATH, batch_size=BATCH_SIZE, exclude_domain=excluded_domain)
+
+    # Preprocessor setup
+    preprocessor = Preprocessor(MAX_SENTENCES, MAX_LEN)
+    preprocessor.set_fasttext_model(EMBEDDINGS_PATH)
+
+    # Preprocess datasets
+    preprocessed_train_ds = preprocess_dataset(train_ds, preprocessor)
+    preprocessed_val_ds = preprocess_dataset(val_ds, preprocessor)
+    preprocessed_test_ds = preprocess_dataset(test_ds, preprocessor)
+
+    # Training
+    model, m_history = training.train(preprocessed_train_ds, preprocessed_val_ds, epochs=50, bilstm=use_Bilstm)
+
+    # Evaluating
+    print("Performance on testing data")
+    model.evaluate(preprocessed_test_ds)
+
+    for d in Domain:
+        print(f'Performance on {d.value} domain')
+        domain_train_ds, _, domain_test_ds = data_loader.load_data(DATA_PATH, domain=d, batch_size=32)
+        domain_preprocessed_test_ds = preprocess_dataset(domain_test_ds, preprocessor)
+        model.evaluate(domain_preprocessed_test_ds)
+
+    # Save the model to disk
+    if not os.path.exists(MODEL_DIR):
+        print('Creating ./models folder...')
+        os.mkdir(MODEL_DIR)
+
+    model_path = f'{MODEL_DIR}/{model_name}.h5'
+    model.save(model_path, save_format='h5')
+    print(f'The model was saved to {model_path}')
+
+
+if __name__ == "__main__":
+    main()
