@@ -19,7 +19,9 @@ We use the datasets from the paper of Pengfei Liu, Xipeng Qiu, and Xuanjing Huan
 
 **Train the General Model**
 
-First we need to train the general model. For that we will use the script: train_general_script.py. 
+First we need to train the general model. For that we will use the script: train_general_script.py. With the option --bilstm=True we select --bilstm and the option: --exclude is if we want to exclude a specific domain. Finally, the field "new_file_path" is the path and the name for the trained model.
+
+run train_general_script.py --bilstm=True --exclude="Domain_Name" -n “new_file_path”
 
 **Transfer Learning**
 
