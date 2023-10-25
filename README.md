@@ -41,3 +41,5 @@ On command line or the run.py script we need to run this command:
 
 
 **Use the model with Active Learning**
+
+run active_learning.py -i ./models/“FT-HAN-BiLSTM-Music-4_gen”.h5 -o \"FT-HAN-BiLSTM-active_learning-Music-Sent2\" -a S -m entropy --use-outlier-detection=False
