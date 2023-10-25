@@ -1,6 +1,6 @@
 # Multi-Domain-Transfer-Learning
 
-
+This repo includes the code of our approach of a Hierarchical Attention-based Transfer Learning model with Active Learning for Multi-Domain Sentiment Classification. First, a general model is trained on product reviews from 16 different domains. Then, this model is fine-tuned on data from a specific domain. We use an Active Learning Algorithm based on Entropy Sampling and Isolation Forest (for Outlier Detection) to reduce the amount of required labeled data. Thus, with 15% labeled data we achive the same performance as with full supervision.   
 ## Getting Started
 The project is about predicting the thermal comfort of senior people. 
 For running the framework, this work recommends creating a new virtual environment which uses the python version 3.8.8
@@ -15,4 +15,6 @@ pip install -r requirements.txt
 **Datasets:**
 
 We use the datasets from the paper of Pengfei Liu, Xipeng Qiu, and Xuanjing Huang. 2017. Adversarial Multi-task Learning for Text Classification. In Proceedings of the 55th Annual Meeting of theAssociation for Computational Linguistics (Volume 1: Long Papers). Associationfor Computational Linguistics, Vancouver, Canada, 1–10.
+
+** Train the General Model**
 
