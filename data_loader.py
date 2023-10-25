@@ -1,100 +1,63 @@
 import os
 from enum import Enum, unique
 from tensorflow.keras import utils
-import tensorflow as tf
 
 @unique
 class Domain(Enum):
-    Books = 'Books'
-    Electronics = 'Electronics'
-    DVD = 'DVD'
-    Kitchen = 'Kitchen'
-    Apparel = 'Apparel'
-    Camera = 'Camera'
-    Health = 'Health'
-    Music = 'Music'
-    Toys = 'Toys'
-    Video = 'Video'
-    Baby = 'Baby'
-    Magazines = 'Magazines'
-    Software = 'Software'
-    Sports = 'Sports'
-    IMDb = 'IMDb'
-    MR = 'MR'
+    # ... [rest of your domains] ...
 
-# global constant for all domains
-ALL_DOMAINS = tuple(Domain)
-
-def load_domain(dataset_path, n_val=0.125, batch_size=32, seed=42):
-    """
-        Loads the train, validation and test-sets from disk.
-        :param dataset_path: The folder containing the train/ and test/ subfolders.
-        :param n_val: Ratio of validation set
-        :param batch_size: Number of observations per batch
-        :param seed: A seed for the random training-validation split
-        :return: training- validation and test-sets as Tensorflow Datasets
-        """
-    train_dir = os.path.join(dataset_path, 'train')
-
+def load_domain(dataset_path, domain, n_val=0.125, batch_size=32, seed=42):
+    """Loads the train, validation and test-sets for a specific domain."""
+    domain_path = os.path.join(dataset_path, domain.value)
+    
+    # Load training set
+    train_path = os.path.join(domain_path, 'train')
     raw_train_ds = utils.text_dataset_from_directory(
-        train_dir,
+        train_path,
         batch_size=batch_size,
         validation_split=n_val,
         subset='training',
-        seed=seed)
+        seed=seed
+    )
 
-    # Create a validation set.
+    # Load validation set
     raw_val_ds = utils.text_dataset_from_directory(
-        train_dir,
+        train_path,
         batch_size=batch_size,
         validation_split=n_val,
         subset='validation',
-        seed=seed)
+        seed=seed
+    )
 
-    test_dir = os.path.join(dataset_path, 'test')
-
-    # Create a test set.
+    # Load test set
+    test_path = os.path.join(domain_path, 'test')
     raw_test_ds = utils.text_dataset_from_directory(
-        test_dir,
-        batch_size=batch_size)
+        test_path,
+        batch_size=batch_size
+    )
 
     return raw_train_ds, raw_val_ds, raw_test_ds
 
-def load_data(path, domain=ALL_DOMAINS, n_val=0.125, batch_size=32, seed=42, exclude_domain=None):
+def load_data(path, domain=None, exclude_domain=None, n_val=0.125, batch_size=32, seed=42):
     """
-        Generates the training, validation and test datasets
-        :param exclude_domain: Domain to be excluded from training
-        :param path: The folder containing all datasets
-        :param domain: The domain to be loaded
-        :param n_val: Ratio of validation set
-        :param batch_size: Number of observations per batch
-        :param seed: A seed for the random training-validation split
-        :return: training- validation and test-sets as Tensorflow Datasets
-        """
+    Generates the training, validation, and test datasets.
+    """
+    if domain is None:  # Load all domains
+        train_ds_list, val_ds_list, test_ds_list = [], [], []
+        for d in Domain:
+            if d.value != exclude_domain:
+                print(f'loading {d.value} ...')
+                train_ds, val_ds, test_ds = load_domain(path, d, n_val, batch_size, seed)
+                train_ds_list.append(train_ds)
+                val_ds_list.append(val_ds)
+                test_ds_list.append(test_ds)
 
-    if domain == ALL_DOMAINS:
-        first_domain = True
-        for d in ALL_DOMAINS:
-            d_str = d.value
-            if d_str == exclude_domain:
-                continue
-            print(f'loading {d_str} ...')
-            dataset_path = os.path.join(path, d_str)
-            train_ds, val_ds, test_ds = load_domain(dataset_path, n_val, batch_size, seed)
-            if first_domain:
-                raw_train_ds = train_ds
-                raw_val_ds = val_ds
-                raw_test_ds = test_ds
-                first_domain = False
-            else:
-                raw_train_ds = raw_train_ds.concatenate(train_ds)
-                raw_val_ds = raw_val_ds.concatenate(val_ds)
-                raw_test_ds = raw_test_ds.concatenate(test_ds)
-        return raw_train_ds, raw_val_ds, raw_test_ds
-    elif domain in Domain:
-        d_str = domain.value
-        print(f'loading {d_str} ...')
-        dataset_path = os.path.join(path, d_str)
-        return load_domain(dataset_path, n_val, batch_size, seed)
+        return (
+            tf.data.experimental.concatenate(train_ds_list),
+            tf.data.experimental.concatenate(val_ds_list),
+            tf.data.experimental.concatenate(test_ds_list)
+        )
+    elif isinstance(domain, Domain):  # Load a specific domain
+        return load_domain(path, domain, n_val, batch_size, seed)
     else:
-        raise NotImplementedError(f'The domain {domain} is unknown.')
+        raise ValueError(f'The domain {domain} is unknown.')

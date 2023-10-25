@@ -37,6 +37,24 @@ class Metric(Enum):
     ENTROPY = 'entropy'
     UNCERTAINTY = 'uncertainty'
 
+ class Domain(Enum):
+    Books = 'Books'
+    Electronics = 'Electronics'
+    DVD = 'DVD'
+    Kitchen = 'Kitchen'
+    Apparel = 'Apparel'
+    Camera = 'Camera'
+    Health = 'Health'
+    Music = 'Music'
+    Toys = 'Toys'
+    Video = 'Video'
+    Baby = 'Baby'
+    Magazines = 'Magazines'
+    Software = 'Software'
+    Sports = 'Sports'
+    IMDb = 'IMDb'
+    MR = 'MR'
+
 def parse_arguments():
     parser = argparse.ArgumentParser(description='Active Learning Script')
     parser.add_argument('-i', '--input', required=True, help='Model path')
