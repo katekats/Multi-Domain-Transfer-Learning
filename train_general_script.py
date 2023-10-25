@@ -77,33 +77,6 @@ preprocessor = Preprocessor(max_sentences, max_len)
 preprocessor.set_fasttext_model('./embeddings/general_embeddings.bin')
 
 # Fasttext:
-#fasttext_dimension = preprocessor.fasttext_model.get_dimension()
-#preprocessed_train_ds = train_ds.map(lambda x, y: (
-#    tf.ensure_shape(
-#        tf.py_function(preprocessor.preprocess_ds_fasttext, [x], tf.float32),
-#        [x.shape[0], max_sentences, max_len, fasttext_dimension]), y),
-##                                     num_parallel_calls=tf.data.experimental.AUTOTUNE,
- #                                    deterministic=False
- #                                    )
-#preprocessed_val_ds = val_ds.map(lambda x, y: (
-#    tf.ensure_shape(
-#        tf.py_function(preprocessor.preprocess_ds_fasttext, [x], tf.float32),
-#        [x.shape[0], max_sentences, max_len, fasttext_dimension]), y),
- #                                #num_parallel_calls=tf.data.experimental.AUTOTUNE,
- #                                #deterministic=False
- #                                )
-#preprocessed_test_ds = test_ds.map(lambda x, y: (
- #   tf.ensure_shape(
- #       tf.py_function(preprocessor.preprocess_ds_fasttext, [x], tf.float32),
-  #      [x.shape[0], max_sentences, max_len, fasttext_dimension]), y),
-                                  # num_parallel_calls=tf.data.experimental.AUTOTUNE,
-                                  # deterministic=False
-  #                                 )
-# Training
-#model, m_history = training.train(preprocessed_train_ds, preprocessed_val_ds,
-   #                               epochs=100, bilstm=use_Bilstm, encoder=encoder)#
-
-# Fasttext:
 fasttext_dimension = preprocessor.fasttext_model.get_dimension()
 preprocessed_train_ds = train_ds.map(lambda x, y: (
     tf.ensure_shape(
@@ -119,7 +92,7 @@ preprocessed_test_ds = test_ds.map(lambda x, y: (
         [x.shape[0], max_sentences, max_len, fasttext_dimension]), y))
 # Training
 model, m_history = training.train(preprocessed_train_ds, preprocessed_val_ds,
-                                  epochs=50, bilstm=use_Bilstm, encoder=encoder)
+                                  epochs=50, bilstm=use_Bilstm)
 
 # Evaluating
 print("Performance on testing data")
