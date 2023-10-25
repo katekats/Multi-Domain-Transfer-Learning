@@ -50,6 +50,6 @@ run active_learning.py -i ./path/to/general_model -o \"output_file_name\" -a S -
    *  -i:  the input model path
    *  -o:  the output file name
    * -a: the fine-tuning approach (it can be either, W, S or A like we mentioned above)
-   * -m: the metric we want to use (entropy)
+   * -m: the metric we want to use (entropy or uncertainty)
    * --use-outlier-detection: if we want to use outlier detection or not 
      
