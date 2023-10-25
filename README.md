@@ -24,6 +24,11 @@ First we need to train the general model. For that we will use the script: train
 run train_general_script.py --bilstm=True --exclude="Domain_Name" -n “model_name”
 
 **Transfer Learning**
+In The transfer_learning.py script we can select the approach we want to use for the fine-tuning and it can be either:
+**-w**: word level,  where the word-level part of the Hierachical-Attention Network is retrainable and we added a layer on top, whereas the sentence-level layers are frozen.
+**-s**:sentence level, where we have sentence-level fine-tuning with an additional layer on the top, where the word-level part is frozen.
+**-a**: word- and sentence-level fine tuning with adding one layer on top of both levels.
+
 
 
 **Use the model with Active Learning**
