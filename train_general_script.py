@@ -1,7 +1,7 @@
-import getopt
 import os
 import sys
 from sys import exit
+import argparse
 
 import fasttext
 import tensorflow as tf
@@ -11,69 +11,66 @@ import training
 from preprocessor import Preprocessor
 from data_loader import Domain
 
-max_len = 50
-max_sentences = 30
-batch_size = 128
+import os
+import argparse
+import tensorflow as tf
 
-#import zipfile
-#with zipfile.ZipFile("prepared_datasets.zip", 'r') as zip_ref:
-#    zip_ref.extractall("prepared_datasets")
+# Constants
+MAX_LEN = 50
+MAX_SENTENCES = 30
+BATCH_SIZE = 128
 
-use_Bilstm = False
-encoder_path = None
-encoder = None
-model_name = None
-excluded_domain = None
-if "-n" not in sys.argv:
-    print('Usage: train_general_script.py [--bilstm=<Boolean> --encoder=<path_to_encoder> --exclude=<domain>] -n  "FT-HAN-BiLSTM"\n'
-          ' --bilstm, --encoder and --exclude are optional arguments.')
-    exit(2)
-
-try:
-    opts, args = getopt.getopt(sys.argv[1:], "hn:", ["bilstm=", "encoder=", "exclude="])
-except getopt.GetoptError:
-    print('Usage: train_general_script.py [--bilstm=<Boolean> --encoder=<path_to_encoder> --exclude=<domain>] -n <model_name>\n'
-          ' --bilstm, --encoder and --exclude are optional arguments.')
+# Functions
+def print_usage_and_exit():
+    print('Usage: train_general_script.py [-h] [--bilstm=<Boolean>] [--encoder=<path_to_encoder>] [--exclude=<domain>] -n <model_name>\n'
+          ' --bilstm, --encoder, and --exclude are optional arguments.')
     sys.exit(2)
-for opt, arg in opts:
-    if opt == '-h':
-        print('Usage: train_general_script.py [--bilstm=<Boolean> --encoder=<path_to_encoder> --exclude=<domain>] -n <model_name>\n'
-              ' --bilstm, --encoder and --exclude are optional arguments.')
-        sys.exit()
-    elif opt == "-n":
-        model_name = arg
-    elif opt == "--bilstm":
-        use_Bilstm = (arg.lower() == 'true')
-    elif opt == "--encoder":
-        encoder_path = arg
-    elif opt == "--exclude":
-        excluded_domain = arg
+
+# Setup argument parser
+parser = argparse.ArgumentParser(description='Train General Script')
+parser.add_argument('-n', required=True, type=str, help='Model name')
+parser.add_argument('--bilstm', type=lambda x: (x.lower() == 'true'), default=False, help='Use BiLSTM')
+parser.add_argument('--encoder', type=str, help='Path to encoder')
+parser.add_argument('--exclude', type=str, help='Domain to exclude')
+
+args = parser.parse_args()
+
+# Assign values from arguments
+model_name = args.n
+use_Bilstm = args.bilstm
+encoder_path = args.encoder
+excluded_domain = args.exclude
+
 # Load the encoder
-if encoder_path is not None:
+if encoder_path:
     encoder = tf.keras.models.load_model(encoder_path)
 
-# Excluded
-if excluded_domain is not None and excluded_domain not in [e.value for e in Domain]:
+# Check exclusion domain
+if excluded_domain and excluded_domain not in [e.value for e in Domain]:
     print(f'--exclude parameter input: {excluded_domain} is an unknown domain. If you want to exclude a domain from training, '
           f'please choose from {[e.value for e in Domain]}')
     sys.exit(1)
 
-# Making sure the necessary folders exist
-if not os.path.exists('./prepared_datasets/prepared_datasets'):
-    print('It seems the ./prepared_datasets folder is missing. '
-          'Please, make sure to pull the latest changes and to unzip the prepared_datasets.zip file')
-    sys.exit(1)
-if not os.path.exists('./embeddings'):
-    print('Creating ./embeddings folder...')
-    os.mkdir('./embeddings')
+# Directory checking and creation
+directories = {
+    './prepared_datasets/prepared_datasets': 'It seems the ./prepared_datasets folder is missing. Please, make sure to pull the latest changes and to unzip the prepared_datasets.zip file',
+    './embeddings': 'Creating ./embeddings folder...',
+    './embeddings/general_embeddings.bin': 'It seems the ./prepared_datasets/prepared_datasets folder is incomplete. Please, make sure to pull the latest changes and to unzip the prepared_datasets.zip file'
+}
 
-if not os.path.exists('./embeddings/general_embeddings.bin'):
-    if not os.path.exists('./prepared_datasets/prepared_datasets/ALL_corpus.txt'):
-        print('It seems the ./prepared_datasets/prepared_datasets folder is incomplete. '
-              'Please, make sure to pull the latest changes and to unzip the prepared_datasets.zip file')
-        sys.exit(1)
+for dir_path, error_message in directories.items():
+    if not os.path.exists(dir_path):
+        if dir_path == './embeddings':
+            os.mkdir(dir_path)
+        else:
+            print(error_message)
+            sys.exit(1)
 
+if not os.path.exists('./embeddings/general_embeddings.bin') and not os.path.exists('./prepared_datasets/prepared_datasets/ALL_corpus.txt'):
     print('Producing general embeddings using FastText...')
+
+
+
     general_embeddings = fasttext.train_unsupervised('./prepared_datasets/prepared_datasets/ALL_corpus.txt',dim=100, minCount=1)
     general_embeddings.save_model('./embeddings/general_embeddings.bin')
 
