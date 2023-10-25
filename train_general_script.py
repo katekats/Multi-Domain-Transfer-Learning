@@ -22,15 +22,14 @@ BATCH_SIZE = 128
 
 # Functions
 def print_usage_and_exit():
-    print('Usage: train_general_script.py [-h] [--bilstm=<Boolean>] [--encoder=<path_to_encoder>] [--exclude=<domain>] -n <model_name>\n'
-          ' --bilstm, --encoder, and --exclude are optional arguments.')
+    print('Usage: train_general_script.py [-h] [--bilstm=<Boolean>] [--exclude=<domain>] -n <model_name>\n'
+          ' --bilstm, and --exclude are optional arguments.')
     sys.exit(2)
 
 # Setup argument parser
 parser = argparse.ArgumentParser(description='Train General Script')
 parser.add_argument('-n', required=True, type=str, help='Model name')
 parser.add_argument('--bilstm', type=lambda x: (x.lower() == 'true'), default=False, help='Use BiLSTM')
-parser.add_argument('--encoder', type=str, help='Path to encoder')
 parser.add_argument('--exclude', type=str, help='Domain to exclude')
 
 args = parser.parse_args()
@@ -38,12 +37,8 @@ args = parser.parse_args()
 # Assign values from arguments
 model_name = args.n
 use_Bilstm = args.bilstm
-encoder_path = args.encoder
 excluded_domain = args.exclude
 
-# Load the encoder
-if encoder_path:
-    encoder = tf.keras.models.load_model(encoder_path)
 
 # Check exclusion domain
 if excluded_domain and excluded_domain not in [e.value for e in Domain]:
