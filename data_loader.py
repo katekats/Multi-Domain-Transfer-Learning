@@ -4,7 +4,7 @@ from tensorflow.keras import utils
 
 @unique
 class Domain(Enum):
-    # ... [rest of your domains] ...
+    
 
 def load_domain(dataset_path, domain, n_val=0.125, batch_size=32, seed=42):
     """Loads the train, validation and test-sets for a specific domain."""
