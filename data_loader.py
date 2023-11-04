@@ -4,6 +4,22 @@ from tensorflow.keras import utils
 
 @unique
 class Domain(Enum):
+    Books = 'Books'
+    Electronics = 'Electronics'
+    DVD = 'DVD'
+    Kitchen = 'Kitchen'
+    Apparel = 'Apparel'
+    Camera = 'Camera'
+    Health = 'Health'
+    Music = 'Music'
+    Toys = 'Toys'
+    Video = 'Video'
+    Baby = 'Baby'
+    Magazines = 'Magazines'
+    Software = 'Software'
+    Sports = 'Sports'
+    IMDb = 'IMDb'
+    MR = 'MR'
     
 
 def load_domain(dataset_path, domain, n_val=0.125, batch_size=32, seed=42):
